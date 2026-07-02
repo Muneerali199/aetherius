@@ -1,0 +1,19 @@
+go 1.22
+
+use (
+	./agent
+	./pkg
+	./services/ai
+	./services/auth
+	./services/billing
+	./services/deployment
+	./services/marketplace
+	./services/monitoring
+	./services/networking
+	./services/node
+	./services/notification
+	./services/scheduler
+	./services/storage
+	./services/support
+	./services/user
+)

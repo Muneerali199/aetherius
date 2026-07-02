@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package aetherius.billing.v1;
+
+option go_package = "github.com/aetherius/platform/services/billing/proto/v1;billingv1";
+
+import "common/v1/common.proto";
+
+service BillingService {
+  rpc GetWallet(WalletRequest) returns (Wallet);
+  rpc Deposit(DepositRequest) returns (Transaction);
+  rpc Withdraw(WithdrawRequest) returns (Transaction);
+  rpc GetUsage(UsageRequest) returns (UsageResponse);
+  rpc GetInvoices(InvoiceListRequest) returns (InvoiceListResponse);
+  rpc CreateUsageRecord(UsageRecord) returns (common.v1.Empty);
+  rpc FinalizeUsageRecord(UsageRecord) returns (Transaction);
+  rpc GetPricing(PricingRequest) returns (PricingResponse);
+  rpc ProcessPayout(PayoutRequest) returns (PayoutResponse);
+}
+
+message WalletRequest {
+  string user_id = 1;
+  string org_id = 2;
+}
+
+message Wallet {
+  string id = 1;
+  string user_id = 2;
+  string org_id = 3;
+  int64 balance_cents = 4;
+  string currency = 5;
+  int64 created_at = 6;
+}
+
+message DepositRequest {
+  string wallet_id = 1;
+  int64 amount_cents = 2;
+  string payment_method_id = 3;
+  string idempotency_key = 4;
+}
+
+message WithdrawRequest {
+  string wallet_id = 1;
+  int64 amount_cents = 2;
+  string destination = 3;
+}
+
+message Transaction {
+  string id = 1;
+  string wallet_id = 2;
+  string type = 3;
+  int64 amount_cents = 4;
+  int64 balance_before_cents = 5;
+  int64 balance_after_cents = 6;
+  string description = 7;
+  string reference_type = 8;
+  string reference_id = 9;
+  int64 created_at = 10;
+}
+
+message UsageRequest {
+  string org_id = 1;
+  string deployment_id = 2;
+  int64 start_time = 3;
+  int64 end_time = 4;
+  int32 page = 5;
+  int32 page_size = 6;
+}
+
+message UsageResponse {
+  repeated UsageRecord records = 1;
+  int64 total_cents = 2;
+  common.v1.Pagination pagination = 3;
+}
+
+message UsageRecord {
+  string id = 1;
+  string deployment_id = 2;
+  string node_id = 3;
+  string gpu_unit_id = 4;
+  int64 start_time = 5;
+  int64 end_time = 6;
+  int64 duration_seconds = 7;
+  int64 rate_per_hour_cents = 8;
+  int64 total_cents = 9;
+  bool finalized = 10;
+}
+
+message InvoiceListRequest {
+  string org_id = 1;
+  string status = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message InvoiceListResponse {
+  repeated Invoice invoices = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+message Invoice {
+  string id = 1;
+  string org_id = 2;
+  string number = 3;
+  string status = 4;
+  int64 period_start = 5;
+  int64 period_end = 6;
+  int64 total_cents = 7;
+  int64 paid_at = 8;
+  repeated LineItem line_items = 9;
+}
+
+message LineItem {
+  string description = 1;
+  int64 quantity = 2;
+  string unit = 3;
+  int64 unit_price_cents = 4;
+  int64 total_cents = 5;
+}
+
+message PricingRequest {
+  string gpu_model = 1;
+  string region = 2;
+}
+
+message PricingResponse {
+  repeated PriceTier tiers = 1;
+}
+
+message PriceTier {
+  string gpu_model = 1;
+  string region = 2;
+  int64 price_per_hour_cents = 3;
+  int64 min_duration_seconds = 4;
+  int64 max_duration_seconds = 5;
+  double provider_revenue_share = 6;
+}
+
+message PayoutRequest {
+  string provider_id = 1;
+  int64 amount_cents = 2;
+  string payment_method = 3;
+}
+
+message PayoutResponse {
+  string payout_id = 1;
+  string status = 2;
+  int64 amount_cents = 3;
+  int64 fee_cents = 4;
+  int64 net_amount_cents = 5;
+}

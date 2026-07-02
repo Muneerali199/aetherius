@@ -1,0 +1,174 @@
+syntax = "proto3";
+
+package aetherius.deployment.v1;
+
+option go_package = "github.com/aetherius/platform/services/deployment/proto/v1;deployv1";
+
+import "common/v1/common.proto";
+
+service DeploymentService {
+  rpc CreateDeployment(CreateDeploymentRequest) returns (Deployment);
+  rpc GetDeployment(GetDeploymentRequest) returns (Deployment);
+  rpc ListDeployments(ListDeploymentsRequest) returns (ListDeploymentsResponse);
+  rpc StopDeployment(StopDeploymentRequest) returns (common.v1.Empty);
+  rpc RestartDeployment(RestartDeploymentRequest) returns (common.v1.Empty);
+  rpc GetDeploymentLogs(LogRequest) returns (stream LogLine);
+  rpc GetDeploymentStatus(StatusRequest) returns (StatusResponse);
+  rpc StreamDeploymentEvents(EventStreamRequest) returns (stream DeploymentEvent);
+  rpc ExecuteCommand(ExecRequest) returns (stream ExecResponse);
+}
+
+message CreateDeploymentRequest {
+  string org_id = 1;
+  string project_id = 2;
+  string user_id = 3;
+  string name = 4;
+  string image = 5;
+  string tag = 6;
+  repeated string command = 7;
+  string entrypoint = 8;
+  string working_dir = 9;
+  ResourceRequest resources = 10;
+  repeated PortMapping ports = 11;
+  map<string, string> env_vars = 12;
+  repeated string secrets = 13;
+  repeated VolumeMount volumes = 14;
+  string restart_policy = 15;
+  int32 max_retries = 16;
+  PlacementPreference placement = 17;
+}
+
+message ResourceRequest {
+  int32 gpu_count = 1;
+  int64 vram_bytes = 2;
+  int64 ram_bytes = 3;
+  double cpu_count = 4;
+  int64 disk_bytes = 5;
+}
+
+message PortMapping {
+  string name = 1;
+  int32 container_port = 2;
+  int32 host_port = 3;
+  string protocol = 4;
+  bool public = 5;
+}
+
+message VolumeMount {
+  string name = 1;
+  string mount_path = 2;
+  int64 size_bytes = 3;
+  bool read_only = 4;
+  string storage_class = 5;
+}
+
+message PlacementPreference {
+  string region = 1;
+  string gpu_model = 2;
+  double max_price_per_hour = 3;
+}
+
+message Deployment {
+  string id = 1;
+  string org_id = 2;
+  string name = 3;
+  string status = 4;
+  string image = 5;
+  string node_id = 6;
+  ResourceRequest resources = 7;
+  string endpoint_url = 8;
+  int64 created_at = 9;
+  int64 started_at = 10;
+  int64 finished_at = 11;
+}
+
+message GetDeploymentRequest {
+  string deployment_id = 1;
+}
+
+message ListDeploymentsRequest {
+  string org_id = 1;
+  string project_id = 2;
+  string status = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message ListDeploymentsResponse {
+  repeated Deployment deployments = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+message StopDeploymentRequest {
+  string deployment_id = 1;
+  bool force = 2;
+  string reason = 3;
+}
+
+message RestartDeploymentRequest {
+  string deployment_id = 1;
+}
+
+message LogRequest {
+  string deployment_id = 1;
+  string container_id = 2;
+  int32 tail_lines = 3;
+  bool follow = 4;
+  string since = 5;
+}
+
+message LogLine {
+  string timestamp = 1;
+  string line = 2;
+  string stream = 3; // stdout, stderr
+  int32 line_number = 4;
+}
+
+message StatusRequest {
+  string deployment_id = 1;
+}
+
+message StatusResponse {
+  string deployment_id = 1;
+  string status = 2;
+  string container_id = 3;
+  string node_id = 4;
+  int32 restart_count = 5;
+  int64 uptime_seconds = 6;
+  ResourceUsage resources = 7;
+  repeated PortMapping assigned_ports = 8;
+  string last_error = 9;
+}
+
+message ResourceUsage {
+  double gpu_utilization_percent = 1;
+  int64 vram_used_bytes = 2;
+  double cpu_utilization_percent = 3;
+  int64 ram_used_bytes = 4;
+  int64 network_rx_bytes = 5;
+  int64 network_tx_bytes = 6;
+}
+
+message EventStreamRequest {
+  string deployment_id = 1;
+}
+
+message DeploymentEvent {
+  string type = 1;
+  string deployment_id = 2;
+  string data_json = 3;
+  int64 timestamp = 4;
+}
+
+message ExecRequest {
+  string deployment_id = 1;
+  string container_id = 2;
+  string command = 3;
+  bool tty = 4;
+}
+
+message ExecResponse {
+  string output = 1;
+  bool finished = 2;
+  int32 exit_code = 3;
+}

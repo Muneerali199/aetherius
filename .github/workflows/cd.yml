@@ -1,0 +1,54 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Images
+        run: |
+          services="auth node scheduler user deployment marketplace billing storage networking ai notification support monitoring"
+          for service in $services; do
+            docker build -t $REGISTRY/aetherius/$service-service:$IMAGE_TAG \
+              -t $REGISTRY/aetherius/$service-service:latest \
+              -f services/$service/Dockerfile services/$service/
+            docker push $REGISTRY/aetherius/$service-service:$IMAGE_TAG
+            docker push $REGISTRY/aetherius/$service-service:latest
+          done
+
+          docker build -t $REGISTRY/aetherius/api-gateway:$IMAGE_TAG \
+            -t $REGISTRY/aetherius/api-gateway:latest \
+            -f api-gateway/Dockerfile api-gateway/
+          docker push $REGISTRY/aetherius/api-gateway:$IMAGE_TAG
+          docker push $REGISTRY/aetherius/api-gateway:latest
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl set image deployment/auth-service auth-service=$REGISTRY/aetherius/auth-service:$IMAGE_TAG -n aetherius
+          kubectl set image deployment/node-service node-service=$REGISTRY/aetherius/node-service:$IMAGE_TAG -n aetherius
+          kubectl set image deployment/scheduler-service scheduler-service=$REGISTRY/aetherius/scheduler-service:$IMAGE_TAG -n aetherius
+          kubectl set image deployment/api-gateway envoy=$REGISTRY/aetherius/api-gateway:$IMAGE_TAG -n aetherius
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/auth-service -n aetherius --timeout=120s
+          kubectl rollout status deployment/node-service -n aetherius --timeout=120s
+          kubectl rollout status deployment/scheduler-service -n aetherius --timeout=120s
+          kubectl rollout status deployment/api-gateway -n aetherius --timeout=120s

@@ -1,0 +1,334 @@
+version: "3.9"
+
+networks:
+  aetherius:
+    driver: bridge
+
+volumes:
+  postgres_auth:
+  postgres_node:
+  postgres_scheduler:
+  redis:
+  rabbitmq:
+  minio:
+  prometheus:
+  grafana:
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - aetherius
+    depends_on:
+      auth-service:
+        condition: service_started
+
+  auth-service:
+    build: ./services/auth
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres-auth
+      DB_NAME: aetherius_auth
+      DB_USER: aetherius
+      DB_PASSWORD: password
+      JWT_ACCESS_KEY: dev-access-secret-key-change-in-production
+      JWT_REFRESH_KEY: dev-refresh-secret-key-change-in-production
+      PORT: "8081"
+    networks:
+      - aetherius
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+
+  node-service:
+    build: ./services/node
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: postgres-node
+      DB_NAME: aetherius_node
+      DB_USER: aetherius
+      DB_PASSWORD: password
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      PORT: "8082"
+    networks:
+      - aetherius
+    depends_on:
+      postgres-node:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  scheduler-service:
+    build: ./services/scheduler
+    ports:
+      - "8083:8083"
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      PORT: "8083"
+    networks:
+      - aetherius
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  user-service:
+    build: ./services/user
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: postgres-auth
+      DB_NAME: aetherius_auth
+      DB_USER: aetherius
+      DB_PASSWORD: password
+      PORT: "8084"
+    networks:
+      - aetherius
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+
+  deployment-service:
+    build: ./services/deployment
+    ports:
+      - "8085:8085"
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      PORT: "8085"
+    networks:
+      - aetherius
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  marketplace-service:
+    build: ./services/marketplace
+    ports:
+      - "8086:8086"
+    environment:
+      DB_HOST: postgres-node
+      DB_NAME: aetherius_marketplace
+      DB_USER: aetherius
+      DB_PASSWORD: password
+      PORT: "8086"
+    networks:
+      - aetherius
+
+  billing-service:
+    build: ./services/billing
+    ports:
+      - "8087:8087"
+    environment:
+      DB_HOST: postgres-billing
+      DB_NAME: aetherius_billing
+      DB_USER: aetherius
+      DB_PASSWORD: password
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      PORT: "8087"
+    networks:
+      - aetherius
+    depends_on:
+      postgres-billing:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  storage-service:
+    build: ./services/storage
+    ports:
+      - "8088:8088"
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: aetherius
+      MINIO_SECRET_KEY: password
+      PORT: "8088"
+    networks:
+      - aetherius
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  networking-service:
+    build: ./services/networking
+    ports:
+      - "8089:8089"
+    environment:
+      PORT: "8089"
+    networks:
+      - aetherius
+
+  ai-service:
+    build: ./services/ai
+    ports:
+      - "8090:8090"
+    environment:
+      PORT: "8090"
+    networks:
+      - aetherius
+
+  notification-service:
+    build: ./services/notification
+    ports:
+      - "8091:8091"
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      PORT: "8091"
+    networks:
+      - aetherius
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  support-service:
+    build: ./services/support
+    ports:
+      - "8092:8092"
+    environment:
+      DB_HOST: postgres-auth
+      DB_NAME: aetherius_support
+      DB_USER: aetherius
+      DB_PASSWORD: password
+      PORT: "8092"
+    networks:
+      - aetherius
+
+  monitoring-service:
+    build: ./services/monitoring
+    ports:
+      - "8093:8093"
+    environment:
+      PORT: "8093"
+    networks:
+      - aetherius
+
+  # Infrastructure
+  postgres-auth:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aetherius_auth
+      POSTGRES_USER: aetherius
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_auth:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aetherius -d aetherius_auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aetherius
+
+  postgres-node:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aetherius_node
+      POSTGRES_USER: aetherius
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_node:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aetherius -d aetherius_node"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aetherius
+
+  postgres-billing:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aetherius_billing
+      POSTGRES_USER: aetherius
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_node:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aetherius -d aetherius_billing"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aetherius
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - aetherius
+
+  rabbitmq:
+    image: rabbitmq:4-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aetherius
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: aetherius
+      MINIO_ROOT_PASSWORD: password
+    volumes:
+      - minio:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aetherius
+
+  vault:
+    image: hashicorp/vault:latest
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: dev-token
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - aetherius
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus:/prometheus
+    networks:
+      - aetherius
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana:/var/lib/grafana
+    networks:
+      - aetherius

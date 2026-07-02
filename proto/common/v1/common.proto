@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package aetherius.common.v1;
+
+option go_package = "github.com/aetherius/platform/pkg/types/commonv1";
+
+message Empty {}
+
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+message Pagination {
+  int32 page = 1;
+  int32 page_size = 2;
+  int32 total = 3;
+}
+
+message Error {
+  string code = 1;
+  string message = 2;
+  map<string, string> details = 3;
+}
+
+message ResourceIdentifier {
+  string id = 1;
+  string type = 2;
+}

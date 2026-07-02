@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package aetherius.auth.v1;
+
+option go_package = "github.com/aetherius/platform/services/auth/proto/v1;authv1";
+
+import "common/v1/common.proto";
+
+service AuthService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (TokenPair);
+  rpc Logout(LogoutRequest) returns (common.v1.Empty);
+  rpc ValidateAccessToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc SetupMFA(SetupMFARequest) returns (SetupMFAResponse);
+  rpc VerifyMFA(VerifyMFARequest) returns (VerifyMFAResponse);
+  rpc InitiatePasswordReset(PassReq) returns (common.v1.Empty);
+  rpc CompletePasswordReset(PassResetReq) returns (common.v1.Empty);
+  rpc ExchangeOAuth(OAuthRequest) returns (LoginResponse);
+  rpc VerifyEmail(EmailVerifyRequest) returns (common.v1.Empty);
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string display_name = 3;
+}
+
+message RegisterResponse {
+  string user_id = 1;
+  string email = 2;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  string mfa_code = 3;
+}
+
+message LoginResponse {
+  TokenPair tokens = 1;
+  bool mfa_required = 2;
+  string session_id = 3;
+  User user = 4;
+}
+
+message TokenPair {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_in = 3;
+  string token_type = 4;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message LogoutRequest {
+  string session_id = 1;
+  string refresh_token = 2;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  string user_id = 1;
+  string org_id = 2;
+  string role = 3;
+  bool valid = 4;
+}
+
+message SetupMFARequest {
+  string user_id = 1;
+  string mfa_type = 2; // "totp" or "webauthn"
+}
+
+message SetupMFAResponse {
+  string secret = 1;
+  string qr_code_url = 2;
+  repeated string backup_codes = 3;
+}
+
+message VerifyMFARequest {
+  string user_id = 1;
+  string code = 2;
+}
+
+message VerifyMFAResponse {
+  bool verified = 1;
+}
+
+message PassReq {
+  string email = 1;
+}
+
+message PassResetReq {
+  string token = 1;
+  string new_password = 2;
+}
+
+message OAuthRequest {
+  string provider = 1;
+  string code = 2;
+  string redirect_uri = 3;
+}
+
+message EmailVerifyRequest {
+  string token = 1;
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string display_name = 3;
+  bool email_verified = 4;
+  bool mfa_enabled = 5;
+  string created_at = 6;
+}

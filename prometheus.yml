@@ -1,0 +1,39 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files:
+  - "alerts/*.yml"
+
+scrape_configs:
+  - job_name: "aetherius-services"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "auth-service:8081"
+          - "node-service:8082"
+          - "scheduler-service:8083"
+          - "user-service:8084"
+          - "deployment-service:8085"
+          - "marketplace-service:8086"
+          - "billing-service:8087"
+          - "storage-service:8088"
+          - "networking-service:8089"
+          - "ai-service:8090"
+          - "notification-service:8091"
+          - "support-service:8092"
+          - "monitoring-service:8093"
+
+  - job_name: "aetherius-nodes"
+    metrics_path: "/metrics"
+    scheme: http
+    static_configs:
+      - targets: []
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance

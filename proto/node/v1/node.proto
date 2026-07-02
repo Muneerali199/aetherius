@@ -1,0 +1,218 @@
+syntax = "proto3";
+
+package aetherius.node.v1;
+
+option go_package = "github.com/aetherius/platform/services/node/proto/v1;nodev1";
+
+import "common/v1/common.proto";
+
+service NodeService {
+  rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc GetNode(GetNodeRequest) returns (Node);
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
+  rpc GetAvailableNodes(AvailableNodesRequest) returns (AvailableNodesResponse);
+  rpc AssignDeployment(AssignDeploymentRequest) returns (AssignDeploymentResponse);
+  rpc UpdateNodeStatus(UpdateStatusRequest) returns (common.v1.Empty);
+  rpc ReportMetrics(MetricsReport) returns (common.v1.Empty);
+  rpc StreamHeartbeats(stream HeartbeatRequest) returns (stream HeartbeatResponse);
+}
+
+message RegisterNodeRequest {
+  string provider_id = 1;
+  HardwareInfo hardware = 2;
+  string agent_version = 3;
+  string public_ip = 4;
+}
+
+message RegisterNodeResponse {
+  string node_id = 1;
+  string node_token = 2;
+  string agent_config = 3;
+}
+
+message HardwareInfo {
+  repeated GPUInfo gpus = 1;
+  CPUInfo cpu = 2;
+  MemoryInfo memory = 3;
+  DiskInfo disk = 4;
+  NetworkInfo network = 5;
+}
+
+message GPUInfo {
+  int32 index = 1;
+  string model = 2;
+  int64 vram_bytes = 3;
+  string vram_type = 4;
+  int32 cuda_cores = 5;
+  int32 tensor_cores = 6;
+  int32 clock_speed_mhz = 7;
+  string uuid = 8;
+  string driver_version = 9;
+  string cuda_version = 10;
+}
+
+message CPUInfo {
+  string model = 1;
+  int32 cores = 2;
+  int32 threads = 3;
+  double clock_speed_ghz = 4;
+}
+
+message MemoryInfo {
+  int64 total_bytes = 1;
+  int64 available_bytes = 2;
+}
+
+message DiskInfo {
+  int64 total_bytes = 1;
+  int64 available_bytes = 2;
+  string filesystem = 3;
+}
+
+message NetworkInfo {
+  double speed_mbps = 1;
+  string public_ip = 2;
+  string region = 3;
+  string country = 4;
+  string city = 5;
+  double latitude = 6;
+  double longitude = 7;
+}
+
+message HeartbeatRequest {
+  string node_id = 1;
+  string node_token = 2;
+  repeated GPUUtilization gpu_util = 3;
+  double cpu_utilization = 4;
+  int64 ram_used_bytes = 5;
+  int64 disk_used_bytes = 6;
+  int64 network_rx_bytes = 7;
+  int64 network_tx_bytes = 8;
+  double load_average = 9;
+  int64 uptime_seconds = 10;
+  repeated string running_container_ids = 11;
+}
+
+message GPUUtilization {
+  int32 gpu_index = 1;
+  double utilization_percent = 2;
+  int64 vram_used_bytes = 3;
+  double temperature_celsius = 4;
+  double power_watts = 5;
+  int32 fan_speed_percent = 6;
+}
+
+message HeartbeatResponse {
+  bool accepted = 1;
+  int64 next_heartbeat_interval_ms = 2;
+  repeated PendingAction pending_actions = 3;
+  string server_time = 4;
+}
+
+message PendingAction {
+  string action_type = 1;  // start_deployment, stop_deployment, update_agent, reboot
+  string payload_json = 2;
+}
+
+message GetNodeRequest {
+  string node_id = 1;
+}
+
+message Node {
+  string id = 1;
+  string provider_id = 2;
+  string status = 3;
+  HardwareInfo hardware = 4;
+  double reputation_score = 5;
+  double benchmark_score = 6;
+  int64 last_heartbeat = 7;
+  string agent_version = 8;
+  int64 created_at = 9;
+}
+
+message ListNodesRequest {
+  string status = 1;
+  string region = 2;
+  string gpu_model = 3;
+  int32 min_vram_gb = 4;
+  int32 page = 5;
+  int32 page_size = 6;
+}
+
+message ListNodesResponse {
+  repeated Node nodes = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+message AvailableNodesRequest {
+  int32 required_gpu_count = 1;
+  int64 required_vram_bytes = 2;
+  int64 required_ram_bytes = 3;
+  int64 required_disk_bytes = 4;
+  string preferred_region = 5;
+  double max_price_per_hour = 6;
+  int32 limit = 7;
+}
+
+message AvailableNodesResponse {
+  repeated ScoredNode nodes = 1;
+}
+
+message ScoredNode {
+  Node node = 1;
+  double score = 2;
+  double estimated_price_per_hour = 3;
+  double estimated_latency_ms = 4;
+}
+
+message AssignDeploymentRequest {
+  string deployment_id = 1;
+  string node_id = 2;
+  string image = 3;
+  string tag = 4;
+  repeated string command = 5;
+  int32 gpu_count = 6;
+  map<string, string> env_vars = 7;
+  repeated PortMapping ports = 8;
+  int64 ram_bytes = 9;
+  int64 disk_bytes = 10;
+  repeated VolumeMount volumes = 11;
+}
+
+message PortMapping {
+  int32 container_port = 1;
+  int32 host_port = 2;
+  string protocol = 3;
+}
+
+message VolumeMount {
+  string name = 1;
+  string mount_path = 2;
+  bool read_only = 3;
+}
+
+message AssignDeploymentResponse {
+  bool accepted = 1;
+  string container_id = 2;
+  string container_name = 3;
+  repeated PortMapping assigned_ports = 4;
+}
+
+message UpdateStatusRequest {
+  string node_id = 1;
+  string status = 2;
+  string reason = 3;
+}
+
+message MetricsReport {
+  string node_id = 1;
+  repeated Metric metrics = 2;
+  int64 timestamp = 3;
+}
+
+message Metric {
+  string name = 1;
+  double value = 2;
+  map<string, string> labels = 3;
+}

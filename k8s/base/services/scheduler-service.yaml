@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: scheduler-service
+  template:
+    metadata:
+      labels:
+        app: scheduler-service
+    spec:
+      containers:
+      - name: scheduler-service
+        image: ghcr.io/aetherius/scheduler-service:latest
+        ports:
+        - containerPort: 8083
+          name: http
+        env:
+        - name: RABBITMQ_URL
+          value: amqp://guest:guest@rabbitmq:5672/
+        - name: PORT
+          value: "8083"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8083
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "2"
+            memory: "2Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scheduler-service
+spec:
+  selector:
+    app: scheduler-service
+  ports:
+  - port: 8083
+    targetPort: 8083
+    name: http

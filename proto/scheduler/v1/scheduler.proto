@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package aetherius.scheduler.v1;
+
+option go_package = "github.com/aetherius/platform/services/scheduler/proto/v1;schedv1";
+
+import "common/v1/common.proto";
+
+service SchedulerService {
+  rpc ScheduleDeployment(ScheduleRequest) returns (ScheduleResponse);
+  rpc GetJobStatus(JobStatusRequest) returns (JobStatusResponse);
+  rpc CancelJob(CancelJobRequest) returns (common.v1.Empty);
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+  rpc Rebalance(RebalanceRequest) returns (RebalanceResponse);
+}
+
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_CRITICAL = 1;
+  PRIORITY_HIGH = 2;
+  PRIORITY_NORMAL = 3;
+  PRIORITY_LOW = 4;
+}
+
+message ScheduleRequest {
+  string deployment_id = 1;
+  string user_id = 2;
+  string org_id = 3;
+  ResourceRequest resources = 4;
+  PlacementPreference placement = 5;
+  Priority priority = 6;
+  int64 max_budget_cents = 7;
+}
+
+message ResourceRequest {
+  int32 gpu_count = 1;
+  int64 vram_bytes = 2;
+  int64 ram_bytes = 3;
+  int64 disk_bytes = 4;
+  double network_speed_mbps = 5;
+  string gpu_model_preference = 6;
+}
+
+message PlacementPreference {
+  string region = 1;
+  repeated string prohibited_regions = 2;
+  double max_latency_ms = 3;
+  bool prefer_lowest_price = 4;
+  bool prefer_most_reliable = 5;
+}
+
+message ScheduleResponse {
+  bool scheduled = 1;
+  string node_id = 2;
+  double estimated_cost_cents = 3;
+  double estimated_latency_ms = 4;
+  double confidence_score = 5;
+  string error_reason = 6;
+}
+
+message JobStatusRequest {
+  string deployment_id = 1;
+}
+
+message JobStatusResponse {
+  string deployment_id = 1;
+  string status = 2;
+  string node_id = 3;
+  int64 scheduled_at = 4;
+  int64 started_at = 5;
+  int64 completed_at = 6;
+  int32 restart_count = 7;
+  string last_error = 8;
+}
+
+message CancelJobRequest {
+  string deployment_id = 1;
+  string reason = 2;
+  bool force = 3;
+}
+
+message ListJobsRequest {
+  string user_id = 1;
+  string status = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListJobsResponse {
+  repeated JobSummary jobs = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+message JobSummary {
+  string deployment_id = 1;
+  string status = 2;
+  string node_id = 3;
+  int32 gpu_count = 4;
+  double cost_per_hour = 5;
+  int64 created_at = 6;
+  int64 running_duration_seconds = 7;
+}
+
+message RebalanceRequest {
+  string region = 1;
+}
+
+message RebalanceResponse {
+  int32 deployments_moved = 1;
+  int32 estimated_savings_cents = 2;
+}
