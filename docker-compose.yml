@@ -34,8 +34,8 @@ services:
       DB_NAME: aetherius_auth
       DB_USER: aetherius
       DB_PASSWORD: password
-      JWT_ACCESS_KEY: dev-access-secret-key-change-in-production
-      JWT_REFRESH_KEY: dev-refresh-secret-key-change-in-production
+      JWT_ACCESS_KEY: 3eaf6e4f506a71bd88a4ac8cafbcd2ed8250f0fadefa720e55ccb42cdea34bba
+      JWT_REFRESH_KEY: 750c066308d7deadb3771bbeed3da62f7849f949b1292f5f6d9adcbc62d5c3d6
       PORT: "8081"
     networks:
       - aetherius
