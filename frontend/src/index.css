@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 100% 3%;
+    --foreground: 195 94% 94%;
+    --card: 210 100% 8%;
+    --card-foreground: 195 94% 94%;
+    --popover: 210 100% 5%;
+    --popover-foreground: 195 94% 94%;
+    --primary: 201 100% 36%;
+    --primary-foreground: 195 94% 94%;
+    --secondary: 210 100% 12%;
+    --secondary-foreground: 195 94% 94%;
+    --muted: 210 100% 12%;
+    --muted-foreground: 195 30% 60%;
+    --accent: 199 82% 74%;
+    --accent-foreground: 210 100% 3%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 201 100% 36% / 0.2;
+    --input: 210 100% 12%;
+    --ring: 199 82% 74%;
+    --radius: 0.625rem;
+    --sidebar-background: 210 100% 3%;
+    --sidebar-foreground: 195 94% 94%;
+    --sidebar-primary: 201 100% 36%;
+    --sidebar-primary-foreground: 195 94% 94%;
+    --sidebar-accent: 210 100% 12%;
+    --sidebar-accent-foreground: 195 94% 94%;
+    --sidebar-border: 201 100% 36% / 0.2;
+    --sidebar-ring: 199 82% 74%;
+
+    --abyssal-black: #000814;
+    --midnight-blue: #001D3D;
+    --fathom-blue: #003566;
+    --core-blue: #0077B6;
+    --glacial-cyan: #90E0EF;
+    --surface-mist: #CAF0F8;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--abyssal-black);
+    color: var(--surface-mist);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: var(--core-blue);
+    color: var(--surface-mist);
+  }
+}
+
+@layer utilities {
+  .font-mono-data {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .text-gradient-cyan {
+    background: linear-gradient(135deg, var(--glacial-cyan), var(--core-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass-surface {
+    background: transparent;
+    border: 1px solid rgba(0, 119, 182, 0.2);
+  }
+
+  .glass-surface-hover:hover {
+    border-color: rgba(0, 119, 182, 0.5);
+  }
+}
