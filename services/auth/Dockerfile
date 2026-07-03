@@ -1,8 +1,9 @@
 FROM golang:1.22-alpine AS builder
-WORKDIR /app
-COPY go.mod go.sum ./
+WORKDIR /build
+COPY services/auth/go.mod services/auth/go.sum ./
+COPY pkg/ /pkg/
 RUN go mod download
-COPY . .
+COPY services/auth/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
 
 FROM alpine:3.20

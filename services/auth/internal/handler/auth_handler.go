@@ -27,8 +27,12 @@ func (h *AuthHandler) RegisterRoutes(r chi.Router, jwtManager *auth.JWTManager) 
 	r.Post("/v1/auth/login", h.Login)
 	r.Post("/v1/auth/refresh", h.Refresh)
 	r.Post("/v1/auth/logout", h.Logout)
-	r.Post("/v1/auth/mfa/setup", h.SetupMFA)
-	r.Post("/v1/auth/mfa/verify", h.VerifyMFA)
+
+	protected := r.With(auth.HTTPMiddleware(jwtManager))
+	protected.Get("/v1/auth/me", h.GetMe)
+	protected.Post("/v1/auth/mfa/setup", h.SetupMFA)
+	protected.Post("/v1/auth/mfa/verify", h.VerifyMFA)
+
 	r.Post("/v1/auth/password/reset/initiate", h.InitiatePasswordReset)
 	r.Post("/v1/auth/password/reset/complete", h.CompletePasswordReset)
 	r.Post("/v1/auth/email/verify", h.VerifyEmail)
@@ -116,6 +120,28 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		"user_id":  user.ID.String(),
 		"email":    user.Email,
 		"name":     user.DisplayName,
+	})
+}
+
+func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	user, err := h.svc.GetUser(r.Context(), claims.UserID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "user not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"user_id":    user.ID.String(),
+		"email":      user.Email,
+		"name":       user.DisplayName,
+		"avatar_url": user.AvatarURL,
+		"created_at": user.CreatedAt,
 	})
 }
 

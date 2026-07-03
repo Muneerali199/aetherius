@@ -216,6 +216,10 @@ func (s *AuthService) CompletePasswordReset(ctx context.Context, token, newPassw
 	return nil
 }
 
+func (s *AuthService) GetUser(ctx context.Context, userID uuid.UUID) (*model.User, error) {
+	return s.userRepo.GetByID(ctx, userID)
+}
+
 func (s *AuthService) VerifyPassword(user *model.User, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)) == nil
 }
