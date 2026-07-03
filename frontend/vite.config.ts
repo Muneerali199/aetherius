@@ -33,6 +33,34 @@ export default defineConfig({
         target: 'http://localhost:8087',
         changeOrigin: true,
       },
+      '/v1/user': {
+        target: 'http://localhost:8084',
+        changeOrigin: true,
+      },
+      '/v1/storage': {
+        target: 'http://localhost:8088',
+        changeOrigin: true,
+      },
+      '/v1/notifications': {
+        target: 'http://localhost:8089',
+        changeOrigin: true,
+      },
+      '/v1/networking': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+      },
+      '/v1/ai': {
+        target: 'http://localhost:8091',
+        changeOrigin: true,
+      },
+      '/v1/monitoring': {
+        target: 'http://localhost:8092',
+        changeOrigin: true,
+      },
+      '/v1/support': {
+        target: 'http://localhost:8093',
+        changeOrigin: true,
+      },
       '/ws': {
         target: process.env.VITE_WS_URL || 'ws://localhost:8080',
         ws: true,

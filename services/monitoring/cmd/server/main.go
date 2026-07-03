@@ -12,13 +12,24 @@ import (
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/aetherius/platform/pkg/auth"
+	"github.com/aetherius/platform/services/monitoring/internal/handler"
+	"github.com/aetherius/platform/services/monitoring/internal/service"
 )
 
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Info().Msg("starting monitoring service")
 
-	port := getEnv("PORT", "8093")
+	port := getEnv("PORT", "8092")
+	accessKey := getEnv("JWT_ACCESS_KEY", "")
+	refreshKey := getEnv("JWT_REFRESH_KEY", "")
+
+	jwtManager := auth.DefaultJWTManager(accessKey, refreshKey)
+
+	monitoringSvc := service.NewMonitoringService()
+	monitoringHandler := handler.NewMonitoringHandler(monitoringSvc)
 
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.RequestID)
@@ -27,10 +38,19 @@ func main() {
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(chiMiddleware.Timeout(30 * time.Second))
 
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
-	})
+	monitoringHandler.RegisterRoutes(r, jwtManager)
+
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				health := monitoringSvc.CheckServices()
+				log.Debug().Str("status", health.Status).Int("services", len(health.Services)).Msg("health check completed")
+			}
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:         ":" + port,

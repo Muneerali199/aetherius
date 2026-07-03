@@ -12,13 +12,29 @@ import (
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/aetherius/platform/pkg/auth"
+	"github.com/aetherius/platform/services/notification/internal/handler"
+	"github.com/aetherius/platform/services/notification/internal/service"
 )
 
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Info().Msg("starting notification service")
 
-	port := getEnv("PORT", "8091")
+	port := getEnv("PORT", "8089")
+	rabbitURL := getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+	accessKey := getEnv("JWT_ACCESS_KEY", "dev-access-secret-key-change-in-production")
+	refreshKey := getEnv("JWT_REFRESH_KEY", "dev-refresh-secret-key-change-in-production")
+
+	jwtManager := auth.DefaultJWTManager(accessKey, refreshKey)
+
+	notifService := service.NewNotificationService(rabbitURL)
+	if err := notifService.Start(); err != nil {
+		log.Fatal().Err(err).Msg("failed to start notification service")
+	}
+
+	notifHandler := handler.NewNotificationHandler()
 
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.RequestID)
@@ -30,6 +46,11 @@ func main() {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(auth.HTTPMiddleware(jwtManager))
+		notifHandler.RegisterRoutes(r)
 	})
 
 	srv := &http.Server{
@@ -58,6 +79,8 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Fatal().Err(err).Msg("server forced to shutdown")
 	}
+
+	notifService.Shutdown()
 }
 
 func getEnv(key, fallback string) string {

@@ -12,13 +12,23 @@ import (
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/aetherius/platform/pkg/auth"
+	"github.com/aetherius/platform/services/networking/internal/handler"
+	"github.com/aetherius/platform/services/networking/internal/service"
 )
 
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Info().Msg("starting networking service")
 
-	port := getEnv("PORT", "8089")
+	accessKey := getEnv("JWT_ACCESS_KEY", "dev-access-secret-key-change-in-production")
+	refreshKey := getEnv("JWT_REFRESH_KEY", "dev-refresh-secret-key-change-in-production")
+	port := getEnv("PORT", "8090")
+
+	jwtManager := auth.DefaultJWTManager(accessKey, refreshKey)
+	netSvc := service.NewNetworkingService()
+	netHandler := handler.NewNetworkingHandler(netSvc)
 
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.RequestID)
@@ -31,6 +41,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
+
+	netHandler.RegisterRoutes(r, jwtManager)
 
 	srv := &http.Server{
 		Addr:         ":" + port,
