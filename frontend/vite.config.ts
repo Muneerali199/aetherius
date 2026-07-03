@@ -9,8 +9,12 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.VITE_PORT || '3000'),
     proxy: {
-      '/v1': {
-        target: process.env.VITE_API_URL || 'http://localhost:8081',
+      '/v1/auth': {
+        target: process.env.VITE_AUTH_URL || 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '/v1/nodes': {
+        target: process.env.VITE_NODE_URL || 'http://localhost:8082',
         changeOrigin: true,
       },
       '/ws': {

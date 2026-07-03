@@ -299,6 +299,68 @@ func generateNodeToken() string {
 	return "nt_" + hex.EncodeToString(b)
 }
 
+type NodeInfo struct {
+	ID               uuid.UUID          `json:"id"`
+	Status           string             `json:"status"`
+	TotalGPU         int                `json:"total_gpu"`
+	AvailableGPU     int                `json:"available_gpu"`
+	TotalVRAMGB      int64              `json:"total_vram_gb"`
+	TotalRAMGB       int64              `json:"total_ram_gb"`
+	TotalDiskGB      int64              `json:"total_disk_gb"`
+	CPUModel         string             `json:"cpu_model"`
+	CPUCores         int                `json:"cpu_cores"`
+	GPUModels        []string           `json:"gpu_models"`
+	OSName           string             `json:"os_name"`
+	Region           string             `json:"region"`
+	FirstSeen        time.Time          `json:"first_seen"`
+	LastHeartbeat    time.Time          `json:"last_heartbeat"`
+	CreatedAt        time.Time          `json:"created_at"`
+}
+
+func (s *NodeService) GetNode(ctx context.Context, nodeID uuid.UUID) (*NodeInfo, error) {
+	node, err := s.repo.GetByID(ctx, nodeID)
+	if err != nil {
+		return nil, err
+	}
+	return nodeToInfo(node), nil
+}
+
+func (s *NodeService) ListNodes(ctx context.Context, providerID uuid.UUID) ([]*NodeInfo, error) {
+	nodes, err := s.repo.ListByProviderID(ctx, providerID)
+	if err != nil {
+		return nil, err
+	}
+	infos := make([]*NodeInfo, len(nodes))
+	for i, n := range nodes {
+		infos[i] = nodeToInfo(n)
+	}
+	return infos, nil
+}
+
+func (s *NodeService) UpdateNodeStatus(ctx context.Context, nodeID uuid.UUID, status string) error {
+	return s.repo.UpdateStatus(ctx, nodeID, model.NodeStatus(status))
+}
+
+func nodeToInfo(n *model.Node) *NodeInfo {
+	return &NodeInfo{
+		ID:            n.ID,
+		Status:        string(n.Status),
+		TotalGPU:      n.TotalGPU,
+		AvailableGPU:  n.AvailableGPU,
+		TotalVRAMGB:   n.TotalVRAMGB,
+		TotalRAMGB:    n.TotalRAMGB,
+		TotalDiskGB:   n.TotalDiskGB,
+		CPUModel:      n.CPUModel,
+		CPUCores:      n.CPUCores,
+		GPUModels:     n.GPUModels,
+		OSName:        n.OSName,
+		Region:        n.Region,
+		FirstSeen:     n.FirstSeen,
+		LastHeartbeat: n.LastHeartbeat,
+		CreatedAt:     n.CreatedAt,
+	}
+}
+
 // Background task: mark nodes as offline if no heartbeat for 60s
 func (s *NodeService) CheckOfflineNodes(ctx context.Context) {
 	ticker := time.NewTicker(30 * time.Second)

@@ -26,7 +26,7 @@ type PostgresConfig struct {
 func DefaultPostgresConfig(host, user, password, database string) PostgresConfig {
 	return PostgresConfig{
 		Host:            host,
-		Port:            5432,
+		Port:           5432,
 		User:            user,
 		Password:        password,
 		Database:        database,
@@ -37,6 +37,12 @@ func DefaultPostgresConfig(host, user, password, database string) PostgresConfig
 		MaxConnIdleTime: 5 * time.Minute,
 		HealthCheckIntv: 30 * time.Second,
 	}
+}
+
+func PostgresConfigWithPort(host string, port int, user, password, database string) PostgresConfig {
+	cfg := DefaultPostgresConfig(host, user, password, database)
+	cfg.Port = port
+	return cfg
 }
 
 func (c PostgresConfig) DSN() string {

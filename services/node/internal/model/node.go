@@ -50,6 +50,7 @@ type Node struct {
 	FirstSeen          time.Time  `json:"first_seen" db:"first_seen"`
 	LastHeartbeat      time.Time  `json:"last_heartbeat" db:"last_heartbeat"`
 	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 type GPUUnit struct {

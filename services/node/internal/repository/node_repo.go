@@ -64,7 +64,7 @@ func (r *NodeRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Node
 		&node.CPUModel, &node.CPUCores, &node.GPUModels, &node.NetworkSpeedMbps,
 		&node.PublicIP, &node.Region, &node.Country, &node.City, &node.Latitude, &node.Longitude,
 		&node.CUDAVersion, &node.DockerVersion, &node.OSName, &node.AgentVersion,
-		&node.NodeToken, &node.FirstSeen, &node.LastHeartbeat, &node.CreatedAt,
+		&node.NodeToken, &node.FirstSeen, &node.LastHeartbeat, &node.CreatedAt, &node.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNodeNotFound
@@ -120,7 +120,7 @@ func (r *NodeRepository) GetAvailable(ctx context.Context, reqGPU int, reqVRAM, 
 			&node.CPUModel, &node.CPUCores, &node.GPUModels, &node.NetworkSpeedMbps,
 			&node.PublicIP, &node.Region, &node.Country, &node.City, &node.Latitude, &node.Longitude,
 			&node.CUDAVersion, &node.DockerVersion, &node.OSName, &node.AgentVersion,
-			&node.NodeToken, &node.FirstSeen, &node.LastHeartbeat, &node.CreatedAt,
+			&node.NodeToken, &node.FirstSeen, &node.LastHeartbeat, &node.CreatedAt, &node.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -128,6 +128,32 @@ func (r *NodeRepository) GetAvailable(ctx context.Context, reqGPU int, reqVRAM, 
 		nodes = append(nodes, node)
 	}
 
+	return nodes, nil
+}
+
+func (r *NodeRepository) ListByProviderID(ctx context.Context, providerID uuid.UUID) ([]*model.Node, error) {
+	query := `SELECT * FROM nodes WHERE provider_id = $1 ORDER BY created_at DESC`
+	rows, err := r.pool.Query(ctx, query, providerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var nodes []*model.Node
+	for rows.Next() {
+		node := &model.Node{}
+		rows.Scan(
+			&node.ID, &node.ProviderID, &node.Status, &node.HardwareFingerprint,
+			&node.BenchmarkScore, &node.ReputationScore,
+			&node.TotalGPU, &node.AvailableGPU, &node.TotalVRAMGB, &node.AvailableVRAMGB,
+			&node.TotalRAMGB, &node.AvailableRAMGB, &node.TotalDiskGB, &node.AvailableDiskGB,
+			&node.CPUModel, &node.CPUCores, &node.GPUModels, &node.NetworkSpeedMbps,
+			&node.PublicIP, &node.Region, &node.Country, &node.City, &node.Latitude, &node.Longitude,
+			&node.CUDAVersion, &node.DockerVersion, &node.OSName, &node.AgentVersion,
+			&node.NodeToken, &node.FirstSeen, &node.LastHeartbeat, &node.CreatedAt, &node.UpdatedAt,
+		)
+		nodes = append(nodes, node)
+	}
 	return nodes, nil
 }
 
@@ -150,7 +176,7 @@ func (r *NodeRepository) ListByStatus(ctx context.Context, status model.NodeStat
 			&node.CPUModel, &node.CPUCores, &node.GPUModels, &node.NetworkSpeedMbps,
 			&node.PublicIP, &node.Region, &node.Country, &node.City, &node.Latitude, &node.Longitude,
 			&node.CUDAVersion, &node.DockerVersion, &node.OSName, &node.AgentVersion,
-			&node.NodeToken, &node.FirstSeen, &node.LastHeartbeat, &node.CreatedAt,
+			&node.NodeToken, &node.FirstSeen, &node.LastHeartbeat, &node.CreatedAt, &node.UpdatedAt,
 		)
 		nodes = append(nodes, node)
 	}
@@ -192,7 +218,7 @@ func (r *NodeRepository) GetNodeByToken(ctx context.Context, token string) (*mod
 		&node.CPUModel, &node.CPUCores, &node.GPUModels, &node.NetworkSpeedMbps,
 		&node.PublicIP, &node.Region, &node.Country, &node.City, &node.Latitude, &node.Longitude,
 		&node.CUDAVersion, &node.DockerVersion, &node.OSName, &node.AgentVersion,
-		&node.NodeToken, &node.FirstSeen, &node.LastHeartbeat, &node.CreatedAt,
+		&node.NodeToken, &node.FirstSeen, &node.LastHeartbeat, &node.CreatedAt, &node.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNodeNotFound

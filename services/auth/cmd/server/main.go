@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -26,6 +27,7 @@ func main() {
 
 	cfg := struct {
 		dbHost      string
+		dbPort      int
 		dbUser      string
 		dbPassword  string
 		dbName      string
@@ -35,6 +37,7 @@ func main() {
 		issuer      string
 	}{
 		dbHost:     getEnv("DB_HOST", "localhost"),
+		dbPort:     getEnvInt("DB_PORT", 5432),
 		dbUser:     getEnv("DB_USER", "aetherius"),
 		dbPassword: getEnv("DB_PASSWORD", "password"),
 		dbName:     getEnv("DB_NAME", "aetherius_auth"),
@@ -47,7 +50,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	dbCfg := database.DefaultPostgresConfig(cfg.dbHost, cfg.dbUser, cfg.dbPassword, cfg.dbName)
+	dbCfg := database.PostgresConfigWithPort(cfg.dbHost, cfg.dbPort, cfg.dbUser, cfg.dbPassword, cfg.dbName)
 	pool, err := database.NewPostgresPool(ctx, dbCfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to database")
@@ -106,6 +109,18 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Fatal().Err(err).Msg("server forced to shutdown")
 	}
+}
+
+func getEnvInt(key string, fallback int) int {
+	val := os.Getenv(key)
+	if val == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(val)
+	if err != nil {
+		return fallback
+	}
+	return n
 }
 
 func getEnv(key, fallback string) string {

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
+	"github.com/aetherius/platform/pkg/auth"
 	"github.com/aetherius/platform/services/node/internal/service"
 )
 
@@ -125,18 +126,62 @@ func (h *NodeHandler) GetNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = nodeID
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	node, err := h.svc.GetNode(r.Context(), nodeID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "node not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, node)
 }
 
 func (h *NodeHandler) ListNodes(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	nodes, err := h.svc.ListNodes(r.Context(), claims.UserID)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to list nodes")
+		writeError(w, http.StatusInternalServerError, "failed to list nodes")
+		return
+	}
+
+	if nodes == nil {
+		nodes = []*service.NodeInfo{}
+	}
+
+	writeJSON(w, http.StatusOK, nodes)
 }
 
 func (h *NodeHandler) PauseNode(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	nodeID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid node_id")
+		return
+	}
+
+	if err := h.svc.UpdateNodeStatus(r.Context(), nodeID, "paused"); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to pause node")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "paused"})
 }
 
 func (h *NodeHandler) ResumeNode(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	nodeID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid node_id")
+		return
+	}
+
+	if err := h.svc.UpdateNodeStatus(r.Context(), nodeID, "active"); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to resume node")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "active"})
 }
