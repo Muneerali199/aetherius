@@ -66,17 +66,29 @@ export default function Navigation() {
           ))}
         </div>
 
-        <a
-          href="#"
-          className="hidden items-center gap-2 rounded-full px-5 py-2 font-mono text-xs tracking-wider transition-all duration-300 hover:brightness-110 md:flex"
-          style={{
-            border: '1px solid rgba(0, 119, 182, 0.4)',
-            color: 'var(--glacial-cyan)',
-          }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-          Network Live
-        </a>
+        <div className="hidden items-center gap-3 md:flex">
+          <a
+            href="/login"
+            className="rounded-full px-5 py-2 font-mono text-xs tracking-wider transition-all duration-300 hover:brightness-110"
+            style={{
+              border: '1px solid rgba(0, 119, 182, 0.3)',
+              color: 'rgba(202, 240, 248, 0.7)',
+            }}
+          >
+            Sign In
+          </a>
+          <a
+            href="/login"
+            className="flex items-center gap-2 rounded-full px-5 py-2 font-mono text-xs tracking-wider transition-all duration-300 hover:brightness-110"
+            style={{
+              border: '1px solid rgba(0, 119, 182, 0.4)',
+              color: 'var(--glacial-cyan)',
+            }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+            Network Live
+          </a>
+        </div>
       </div>
     </nav>
   );
