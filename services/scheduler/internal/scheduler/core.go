@@ -353,7 +353,7 @@ func (s *Scheduler) estimateCost(node *NodeSnapshot, req *DeploymentRequest) int
 
 	// RAM cost
 	ramGB := req.Resources.RAMBytes / (1024 * 1024 * 1024)
-	ramCost := ramGB * 0.5 // $0.005/hr per GB
+	ramCost := int64(float64(ramGB) * 0.5) // $0.005/hr per GB
 
 	total := gpuCost + vramCost + ramCost
 

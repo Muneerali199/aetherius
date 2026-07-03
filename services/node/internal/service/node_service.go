@@ -231,45 +231,45 @@ func (s *NodeService) extractGPUNames(gpus []GPUInfo) []string {
 }
 
 type HardwareInfo struct {
-	GPUs          []GPUInfo
-	CPU           CPUInfo
-	RAM           MemoryInfo
-	Disk          DiskInfo
-	Network       NetworkInfo
-	CUDAVersion   string
-	ROCmVersion   string
-	DockerVersion string
-	OSName        string
+	GPUs          []GPUInfo `json:"gpus"`
+	CPU           CPUInfo  `json:"cpu"`
+	RAM           MemoryInfo `json:"ram"`
+	Disk          DiskInfo  `json:"disk"`
+	Network       NetworkInfo `json:"network"`
+	CUDAVersion   string    `json:"cuda_version"`
+	ROCmVersion   string    `json:"rocm_version"`
+	DockerVersion string    `json:"docker_version"`
+	OSName        string    `json:"os_name"`
 }
 
 type GPUInfo struct {
-	Model     string
-	VRAMBytes int64
-	Cores     int
+	Model     string `json:"model"`
+	VRAMBytes int64  `json:"vram_bytes"`
+	Cores     int    `json:"cores"`
 }
 
 type CPUInfo struct {
-	Model string
-	Cores int
+	Model string `json:"model"`
+	Cores int    `json:"cores"`
 }
 
 type MemoryInfo struct {
-	TotalBytes int64
+	TotalBytes int64 `json:"total_bytes"`
 }
 
 type DiskInfo struct {
-	TotalBytes int64
-	Filesystem string
+	TotalBytes int64  `json:"total_bytes"`
+	Filesystem string `json:"filesystem"`
 }
 
 type NetworkInfo struct {
-	SpeedMbps float64
-	PublicIP  string
-	Region    string
-	Country   string
-	City      string
-	Latitude  float64
-	Longitude float64
+	SpeedMbps float64 `json:"speed_mbps"`
+	PublicIP  string  `json:"public_ip"`
+	Region    string  `json:"region"`
+	Country   string  `json:"country"`
+	City      string  `json:"city"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 type HeartbeatData struct {

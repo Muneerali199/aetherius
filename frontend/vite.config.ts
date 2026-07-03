@@ -10,11 +10,27 @@ export default defineConfig({
     port: parseInt(process.env.VITE_PORT || '3000'),
     proxy: {
       '/v1/auth': {
-        target: process.env.VITE_AUTH_URL || 'http://localhost:8081',
+        target: 'http://localhost:8081',
         changeOrigin: true,
       },
       '/v1/nodes': {
-        target: process.env.VITE_NODE_URL || 'http://localhost:8082',
+        target: 'http://localhost:8082',
+        changeOrigin: true,
+      },
+      '/v1/deployments': {
+        target: 'http://localhost:8085',
+        changeOrigin: true,
+      },
+      '/v1/listings': {
+        target: 'http://localhost:8086',
+        changeOrigin: true,
+      },
+      '/v1/orders': {
+        target: 'http://localhost:8086',
+        changeOrigin: true,
+      },
+      '/v1/billing': {
+        target: 'http://localhost:8087',
         changeOrigin: true,
       },
       '/ws': {
