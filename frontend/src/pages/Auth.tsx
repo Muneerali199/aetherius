@@ -40,9 +40,13 @@ export default function Auth() {
       }
 
       if (mode === 'login') {
+        if (data.mfa_required) {
+          setError('MFA code required (not yet supported in browser)')
+          return
+        }
         localStorage.setItem('access_token', data.tokens.access_token)
         localStorage.setItem('refresh_token', data.tokens.refresh_token)
-        navigate('/')
+        navigate('/dashboard')
       } else {
         setMode('login')
         setError('Account created! Please sign in.')

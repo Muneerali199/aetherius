@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 const navLinks = [
   { label: 'Infrastructure', href: '#capabilities' },
@@ -9,7 +10,13 @@ const navLinks = [
 
 export default function Navigation() {
   const [scrolled, setScrolled] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem('access_token'));
+  }, []);
 
   useEffect(() => {
     const onScroll = () => {
@@ -67,19 +74,33 @@ export default function Navigation() {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
-          <a
-            href="/login"
-            className="rounded-full px-5 py-2 font-mono text-xs tracking-wider transition-all duration-300 hover:brightness-110"
-            style={{
-              border: '1px solid rgba(0, 119, 182, 0.3)',
-              color: 'rgba(202, 240, 248, 0.7)',
-            }}
-          >
-            Sign In
-          </a>
-          <a
-            href="/login"
-            className="flex items-center gap-2 rounded-full px-5 py-2 font-mono text-xs tracking-wider transition-all duration-300 hover:brightness-110"
+          {isLoggedIn ? (
+            <a
+              href="/dashboard"
+              className="flex items-center gap-2 rounded-full px-5 py-2 font-mono text-xs tracking-wider transition-all duration-300 hover:brightness-110"
+              style={{
+                border: '1px solid rgba(0, 119, 182, 0.4)',
+                color: 'var(--glacial-cyan)',
+              }}
+              onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
+            >
+              Dashboard
+            </a>
+          ) : (
+            <a
+              href="/login"
+              className="rounded-full px-5 py-2 font-mono text-xs tracking-wider transition-all duration-300 hover:brightness-110"
+              style={{
+                border: '1px solid rgba(0, 119, 182, 0.3)',
+                color: 'rgba(202, 240, 248, 0.7)',
+              }}
+              onClick={(e) => { e.preventDefault(); navigate('/login'); }}
+            >
+              Sign In
+            </a>
+          )}
+          <div
+            className="flex items-center gap-2 rounded-full px-5 py-2 font-mono text-xs tracking-wider"
             style={{
               border: '1px solid rgba(0, 119, 182, 0.4)',
               color: 'var(--glacial-cyan)',
@@ -87,7 +108,7 @@ export default function Navigation() {
           >
             <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
             Network Live
-          </a>
+          </div>
         </div>
       </div>
     </nav>
