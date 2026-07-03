@@ -34,3 +34,4 @@ frontend/.env
 # Logs
 *.log
 /agent/*.log
+server
