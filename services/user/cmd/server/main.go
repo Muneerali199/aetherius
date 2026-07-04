@@ -18,6 +18,7 @@ import (
 	"github.com/aetherius/platform/pkg/database"
 	"github.com/aetherius/platform/services/user/internal/handler"
 	"github.com/aetherius/platform/services/user/internal/repository"
+	mw "github.com/aetherius/platform/pkg/middleware"
 	"github.com/aetherius/platform/services/user/internal/service"
 )
 
@@ -83,6 +84,7 @@ func main() {
 	userHandler := handler.NewUserHandler(userSvc)
 
 	r := chi.NewRouter()
+	r.Use(mw.CORSMiddleware)
 	r.Use(chiMiddleware.RequestID)
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)

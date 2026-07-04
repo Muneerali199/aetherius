@@ -15,6 +15,7 @@ import (
 
 	"github.com/aetherius/platform/pkg/auth"
 	"github.com/aetherius/platform/services/monitoring/internal/handler"
+	mw "github.com/aetherius/platform/pkg/middleware"
 	"github.com/aetherius/platform/services/monitoring/internal/service"
 )
 
@@ -32,6 +33,7 @@ func main() {
 	monitoringHandler := handler.NewMonitoringHandler(monitoringSvc)
 
 	r := chi.NewRouter()
+	r.Use(mw.CORSMiddleware)
 	r.Use(chiMiddleware.RequestID)
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)

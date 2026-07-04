@@ -18,6 +18,7 @@ import (
 	"github.com/aetherius/platform/pkg/database"
 	"github.com/aetherius/platform/services/marketplace/internal/handler"
 	"github.com/aetherius/platform/services/marketplace/internal/repository"
+	mw "github.com/aetherius/platform/pkg/middleware"
 	"github.com/aetherius/platform/services/marketplace/internal/service"
 )
 
@@ -56,6 +57,7 @@ func main() {
 	marketplaceHandler := handler.NewMarketplaceHandler(marketplaceSvc)
 
 	r := chi.NewRouter()
+	r.Use(mw.CORSMiddleware)
 	r.Use(chiMiddleware.RequestID)
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)

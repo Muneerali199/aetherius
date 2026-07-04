@@ -61,6 +61,10 @@ export default defineConfig({
         target: 'http://localhost:8093',
         changeOrigin: true,
       },
+      '/v1/payments': {
+        target: 'http://localhost:8094',
+        changeOrigin: true,
+      },
       '/ws': {
         target: process.env.VITE_WS_URL || 'ws://localhost:8080',
         ws: true,

@@ -25,6 +25,7 @@ import (
 	"github.com/aetherius/platform/services/scheduler/internal/handler"
 	"github.com/aetherius/platform/services/scheduler/internal/model"
 	"github.com/aetherius/platform/services/scheduler/internal/repository"
+	mw "github.com/aetherius/platform/pkg/middleware"
 	"github.com/aetherius/platform/services/scheduler/internal/scheduler"
 )
 
@@ -194,6 +195,7 @@ func main() {
 	}()
 
 	r := chi.NewRouter()
+	r.Use(mw.CORSMiddleware)
 	r.Use(chiMiddleware.RequestID)
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)

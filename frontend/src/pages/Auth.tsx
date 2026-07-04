@@ -30,6 +30,7 @@ export default function Auth() {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body),
       })
 
@@ -46,6 +47,11 @@ export default function Auth() {
         }
         localStorage.setItem('access_token', data.tokens.access_token)
         localStorage.setItem('refresh_token', data.tokens.refresh_token)
+        try {
+          await fetch('/v1/payments/wallet', {
+            headers: { Authorization: `Bearer ${data.tokens.access_token}` }
+          })
+        } catch {}
         navigate('/dashboard')
       } else {
         setMode('login')

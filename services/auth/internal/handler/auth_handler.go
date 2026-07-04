@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -115,11 +118,50 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setTokenCookies(w, tokens.AccessToken, tokens.RefreshToken)
+	csrfToken := generateCSRFToken()
+	http.SetCookie(w, &http.Cookie{
+		Name: "csrf_token", Value: csrfToken, Path: "/",
+		HttpOnly: false, Secure: false, SameSite: http.SameSiteLaxMode, MaxAge: 900,
+	})
+	w.Header().Set("X-CSRF-Token", csrfToken)
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tokens":   tokens,
-		"user_id":  user.ID.String(),
-		"email":    user.Email,
-		"name":     user.DisplayName,
+		"tokens":         tokens,
+		"user_id":        user.ID.String(),
+		"email":          user.Email,
+		"name":           user.DisplayName,
+		"session_expiry": time.Now().Add(7 * 24 * time.Hour).Unix(),
+	})
+}
+
+func setTokenCookies(w http.ResponseWriter, accessToken, refreshToken string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   900,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   604800,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "csrf_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: false,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   900,
 	})
 }
 
@@ -162,6 +204,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setTokenCookies(w, tokens.AccessToken, tokens.RefreshToken)
 	writeJSON(w, http.StatusOK, tokens)
 }
 
@@ -173,15 +216,27 @@ type LogoutRequest struct {
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req LogoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
+		req = LogoutRequest{}
 	}
 
 	if err := h.svc.Logout(r.Context(), req.SessionID, req.RefreshToken); err != nil {
 		log.Error().Err(err).Msg("logout failed")
 	}
 
+	clearTokenCookies(w)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
+}
+
+func clearTokenCookies(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{Name: "access_token", Value: "", Path: "/", HttpOnly: true, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: "refresh_token", Value: "", Path: "/", HttpOnly: true, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: "csrf_token", Value: "", Path: "/", HttpOnly: false, MaxAge: -1})
+}
+
+func generateCSRFToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 type MFASetupResponse struct {

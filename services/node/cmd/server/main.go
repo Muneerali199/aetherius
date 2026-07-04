@@ -19,6 +19,7 @@ import (
 	"github.com/aetherius/platform/pkg/queue"
 	"github.com/aetherius/platform/services/node/internal/handler"
 	"github.com/aetherius/platform/services/node/internal/repository"
+	mw "github.com/aetherius/platform/pkg/middleware"
 	"github.com/aetherius/platform/services/node/internal/service"
 )
 
@@ -76,6 +77,7 @@ func main() {
 	nodeHandler := handler.NewNodeHandler(nodeService)
 
 	r := chi.NewRouter()
+	r.Use(mw.CORSMiddleware)
 	r.Use(chiMiddleware.RequestID)
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)

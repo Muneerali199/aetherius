@@ -18,6 +18,7 @@ import (
 	"github.com/aetherius/platform/pkg/database"
 	"github.com/aetherius/platform/services/billing/internal/handler"
 	"github.com/aetherius/platform/services/billing/internal/repository"
+	mw "github.com/aetherius/platform/pkg/middleware"
 	"github.com/aetherius/platform/services/billing/internal/service"
 )
 
@@ -28,9 +29,9 @@ func main() {
 	port := getEnv("PORT", "8087")
 	dbHost := getEnv("DB_HOST", "localhost")
 	dbPortStr := getEnv("DB_PORT", "5432")
-	dbUser := getEnv("DB_USER", "postgres")
-	dbPassword := getEnv("DB_PASSWORD", "postgres")
-	dbName := getEnv("DB_NAME", "billing")
+	dbUser := getEnv("DB_USER", "aetherius")
+	dbPassword := getEnv("DB_PASSWORD", "password")
+	dbName := getEnv("DB_NAME", "aetherius_billing")
 	jwtAccessKey := getEnv("JWT_ACCESS_KEY", "")
 	jwtRefreshKey := getEnv("JWT_REFRESH_KEY", "")
 
@@ -56,6 +57,7 @@ func main() {
 	billingHandler := handler.NewBillingHandler(billingSvc)
 
 	r := chi.NewRouter()
+	r.Use(mw.CORSMiddleware)
 	r.Use(chiMiddleware.RequestID)
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)

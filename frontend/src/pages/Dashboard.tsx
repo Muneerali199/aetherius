@@ -29,7 +29,7 @@ interface NodeInfo {
   created_at: string
 }
 
-type Tab = 'overview' | 'nodes' | 'connect'
+type Tab = 'overview' | 'nodes' | 'connect' | 'billing'
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, { bg: string; text: string; dot: string }> = {
@@ -107,6 +107,7 @@ export default function Dashboard() {
     { key: 'overview', label: 'OVERVIEW' },
     { key: 'nodes', label: `NODES (${nodes.length})` },
     { key: 'connect', label: 'CONNECT' },
+    { key: 'billing', label: 'BILLING' },
   ]
 
   return (
@@ -170,6 +171,16 @@ export default function Dashboard() {
                     <p className="mt-1 font-mono text-[10px] tracking-wider" style={{ color: 'rgba(202, 240, 248, 0.3)' }}>{s.sub}</p>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-4">
+                <div className="rounded-xl p-5" style={{ border: '1px solid rgba(0, 119, 182, 0.15)', backdropFilter: 'blur(12px)', background: 'rgba(0, 13, 29, 0.6)' }}>
+                  <p className="font-mono text-xs tracking-[0.2em]" style={{ color: 'rgba(202, 240, 248, 0.4)' }}>WALLET BALANCE</p>
+                  <p className="mt-2 font-sans text-2xl font-semibold tracking-tight" style={{ color: 'var(--glacial-cyan)' }}>—</p>
+                  <a href="/billing" className="mt-2 inline-block font-mono text-[10px] tracking-wider transition-colors" style={{ color: 'rgba(144, 224, 239, 0.6)' }}>
+                    MANAGE BILLING →
+                  </a>
+                </div>
               </div>
 
               <div className="rounded-xl p-6" style={{ border: '1px solid rgba(0, 119, 182, 0.15)', backdropFilter: 'blur(12px)', background: 'rgba(0, 13, 29, 0.6)' }}>
@@ -320,6 +331,16 @@ export default function Dashboard() {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {tab === 'billing' && (
+            <div className="text-center">
+              <div className="rounded-xl p-12" style={{ border: '1px solid rgba(0, 119, 182, 0.15)', backdropFilter: 'blur(12px)', background: 'rgba(0, 13, 29, 0.6)' }}>
+                <a href="/billing" className="inline-block font-mono text-xs tracking-[0.15em] transition-colors" style={{ color: 'var(--glacial-cyan)' }}>
+                  MANAGE WALLET & PAYMENTS →
+                </a>
               </div>
             </div>
           )}

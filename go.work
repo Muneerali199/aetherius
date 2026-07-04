@@ -13,6 +13,7 @@ use (
 	./services/node
 	./services/notification
 	./services/scheduler
+	./services/payment
 	./services/storage
 	./services/support
 	./services/user

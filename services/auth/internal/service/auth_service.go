@@ -207,13 +207,22 @@ func (s *AuthService) InitiatePasswordReset(ctx context.Context, email string) e
 }
 
 func (s *AuthService) CompletePasswordReset(ctx context.Context, token, newPassword string) error {
-	_ = token
+	userID, err := uuid.Parse(token)
+	if err != nil {
+		return errors.New("invalid token")
+	}
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return errors.New("invalid or expired reset token")
+	}
+
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
-	_ = passwordHash
-	return nil
+
+	return s.userRepo.UpdatePassword(ctx, user.ID, string(passwordHash))
 }
 
 func (s *AuthService) GetUser(ctx context.Context, userID uuid.UUID) (*model.User, error) {
