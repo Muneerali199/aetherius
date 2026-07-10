@@ -169,7 +169,8 @@ func (d *Detector) detectGPUDarwin() []GPUInfo {
 
 	for i, line := range lines {
 		if strings.Contains(line, "Chipset Model:") {
-			model := strings.TrimSpace(strings.TrimPrefix(line, "Chipset Model:"))
+			parts := strings.SplitN(line, ":", 2)
+			model := strings.TrimSpace(parts[len(parts)-1])
 			gpu := GPUInfo{
 				Index: len(gpus),
 				Model: model,
@@ -178,8 +179,7 @@ func (d *Detector) detectGPUDarwin() []GPUInfo {
 			// Look for VRAM in next few lines
 			for j := i + 1; j < len(lines) && j < i+5; j++ {
 				if strings.Contains(lines[j], "VRAM") {
-					vramStr := strings.TrimSpace(lines[j])
-					gpu.VRAMBytes = parseVRAM(vramStr)
+					gpu.VRAMBytes = parseVRAM(lines[j])
 				}
 			}
 
@@ -338,19 +338,32 @@ func (d *Detector) detectOS() string {
 }
 
 func parseVRAM(s string) int64 {
-	var value int64
-	var unit string
-	fmt.Sscanf(s, "%d %s", &value, &unit)
-
-	switch strings.ToLower(unit) {
-	case "tb", "tib":
-		return value * 1024 * 1024 * 1024 * 1024
-	case "gb", "gib":
-		return value * 1024 * 1024 * 1024
-	case "mb", "mib":
-		return value * 1024 * 1024
+	fields := strings.Fields(s)
+	for i, f := range fields {
+		var value int64
+		if _, err := fmt.Sscanf(f, "%d", &value); err == nil && value > 0 {
+			if i+1 < len(fields) {
+				unit := strings.ToLower(fields[i+1])
+				switch unit {
+				case "tb", "tib":
+					return value * 1024 * 1024 * 1024 * 1024
+				case "gb", "gib":
+					return value * 1024 * 1024 * 1024
+				case "mb", "mib":
+					return value * 1024 * 1024
+				default:
+					if strings.Contains(unit, "mb") {
+						return value * 1024 * 1024
+					}
+					if strings.Contains(unit, "gb") {
+						return value * 1024 * 1024 * 1024
+					}
+				}
+			}
+			return value * 1024 * 1024 // assume MB if no unit
+		}
 	}
-	return value
+	return 0
 }
 
 func estimateCUDACores(model string) int {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 const navLinks = [
+  { label: 'Marketplace', href: '/marketplace' },
   { label: 'Infrastructure', href: '#capabilities' },
   { label: 'Manifesto', href: '#manifesto' },
   { label: 'Network', href: '#network' },
@@ -63,6 +64,10 @@ export default function Navigation() {
               className="font-mono-data transition-colors duration-300 hover:text-mist"
               style={{ color: 'rgba(202, 240, 248, 0.6)' }}
               onClick={(e) => {
+                if (link.href.startsWith('/')) {
+                  // Internal route — let browser navigate
+                  return;
+                }
                 e.preventDefault();
                 const el = document.querySelector(link.href);
                 if (el) el.scrollIntoView({ behavior: 'smooth' });

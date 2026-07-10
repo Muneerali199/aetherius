@@ -36,6 +36,7 @@ type Node struct {
 	CPUCores           int        `json:"cpu_cores" db:"cpu_cores"`
 	GPUModels          []string   `json:"gpu_models" db:"gpu_models"`
 	NetworkSpeedMbps   float64    `json:"network_speed_mbps" db:"network_speed_mbps"`
+	AgentURL           string     `json:"agent_url,omitempty" db:"agent_url"`
 	PublicIP           string     `json:"public_ip,omitempty" db:"public_ip"`
 	Region             string     `json:"region" db:"region"`
 	Country            string     `json:"country" db:"country"`
@@ -65,6 +66,16 @@ type GPUUnit struct {
 	ClockSpeedMHz int       `json:"clock_speed_mhz" db:"clock_speed_mhz"`
 	UUID          string    `json:"uuid" db:"uuid"`
 	Status        string    `json:"status" db:"status"`
+}
+
+type SSHKey struct {
+	ID          uuid.UUID `json:"id" db:"id"`
+	UserID      uuid.UUID `json:"user_id" db:"user_id"`
+	Name        string    `json:"name" db:"name"`
+	PublicKey   string    `json:"public_key" db:"public_key"`
+	Fingerprint string    `json:"fingerprint" db:"fingerprint"`
+	IsDefault   bool      `json:"is_default" db:"is_default"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 }
 
 type Heartbeat struct {

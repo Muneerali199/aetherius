@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,14 +31,41 @@ func NewNodeService(repo *repository.NodeRepository, q *queue.Client) *NodeServi
 	}
 }
 
-func (s *NodeService) RegisterNode(ctx context.Context, providerID uuid.UUID, hardware HardwareInfo, agentVersion, publicIP string) (*model.Node, string, error) {
+func (s *NodeService) RegisterNode(ctx context.Context, providerID uuid.UUID, hardware HardwareInfo, agentVersion, publicIP, agentURL string) (*model.Node, string, error) {
 	fingerprint := s.generateFingerprint(hardware)
 	nodeToken := generateNodeToken()
+
+	// Check if node with this hardware fingerprint already exists
+	existing, err := s.repo.GetByFingerprint(ctx, fingerprint)
+	if err != nil {
+		return nil, "", fmt.Errorf("check existing node: %w", err)
+	}
+
+	if existing != nil {
+		// Re-register: update token, set active, refresh resources
+		existing.Status = model.NodeStatusActive
+		existing.NodeToken = nodeToken
+		existing.AgentVersion = agentVersion
+		existing.AgentURL = agentURL
+		existing.AvailableGPU = len(hardware.GPUs)
+		existing.AvailableVRAMGB = s.sumVRAM(hardware.GPUs)
+		existing.AvailableRAMGB = hardware.RAM.TotalBytes / (1024 * 1024 * 1024)
+		existing.AvailableDiskGB = hardware.Disk.TotalBytes / (1024 * 1024 * 1024)
+
+		if err := s.repo.UpdateNode(ctx, existing); err != nil {
+			return nil, "", fmt.Errorf("update existing node: %w", err)
+		}
+
+		log.Info().Str("node_id", existing.ID.String()).Str("provider", providerID.String()).
+			Int("gpus", existing.TotalGPU).Msg("node re-registered")
+
+		return existing, nodeToken, nil
+	}
 
 	node := &model.Node{
 		ID:                 uuid.New(),
 		ProviderID:         providerID,
-		Status:             model.NodeStatusPending,
+		Status:             model.NodeStatusActive,
 		HardwareFingerprint: fingerprint,
 		TotalGPU:           len(hardware.GPUs),
 		AvailableGPU:       len(hardware.GPUs),
@@ -61,25 +89,13 @@ func (s *NodeService) RegisterNode(ctx context.Context, providerID uuid.UUID, ha
 		DockerVersion:      hardware.DockerVersion,
 		OSName:             hardware.OSName,
 		AgentVersion:       agentVersion,
+		AgentURL:           agentURL,
 		NodeToken:          nodeToken,
 	}
 
 	if err := s.repo.Create(ctx, node); err != nil {
 		return nil, "", fmt.Errorf("create node: %w", err)
 	}
-
-	// Publish node registered event
-	payload, _ := json.Marshal(map[string]interface{}{
-		"node_id": node.ID.String(),
-		"status":  node.Status,
-	})
-	s.queue.Publish(context.Background(), queue.ExchangeDomainEvents,
-		"node.registered", queue.Event{
-			Type:      "node.registered",
-			Source:    "node-service",
-			Payload:   payload,
-			Timestamp: time.Now(),
-		})
 
 	log.Info().Str("node_id", node.ID.String()).Str("provider", providerID.String()).
 		Int("gpus", node.TotalGPU).Msg("node registered")
@@ -93,21 +109,29 @@ func (s *NodeService) ProcessHeartbeat(ctx context.Context, nodeID uuid.UUID, hb
 		return err
 	}
 
+	// Update agent_url if provided
+	if hb.AgentURL != "" && hb.AgentURL != node.AgentURL {
+		node.AgentURL = hb.AgentURL
+		s.repo.UpdateAgentURL(ctx, nodeID, hb.AgentURL)
+	}
+
 	// Update node status if it was offline
 	if node.Status == model.NodeStatusOffline || node.Status == model.NodeStatusPending {
 		s.repo.UpdateHeartbeat(ctx, nodeID, model.NodeStatusActive)
 	}
 
-	// Update available resources based on heartbeat
-	availVRAM := node.TotalVRAMGB
-	for i, used := range hb.VRAMUsed {
-		if i < len(hb.GPUUtil) {
-			availVRAM -= used / (1024 * 1024 * 1024)
+	// Update available resources based on heartbeat (never go below 0)
+	availVRAM := max(0, node.TotalVRAMGB)
+	availRAM := max(0, node.TotalRAMGB-hb.RAMUsedGB)
+	availDisk := max(0, node.TotalDiskGB-hb.DiskUsedGB)
+	availGPU := node.TotalGPU
+	for _, c := range hb.RunningContainers {
+		if strings.HasPrefix(c, "aetherius-") {
+			availGPU--
 		}
 	}
-	availRAM := node.TotalRAMGB - (hb.RAMUsedGB)
-	availDisk := node.TotalDiskGB - hb.DiskUsedGB
-	s.repo.UpdateResources(ctx, nodeID, node.TotalGPU-len(hb.RunningContainers), availVRAM, availRAM, availDisk)
+	availGPU = max(0, availGPU)
+	s.repo.UpdateResources(ctx, nodeID, availGPU, availVRAM, availRAM, availDisk)
 
 	// Record heartbeat
 	heartbeat := &model.Heartbeat{
@@ -273,6 +297,7 @@ type NetworkInfo struct {
 }
 
 type HeartbeatData struct {
+	AgentURL          string
 	GPUUtil           []float64
 	GPUTemps          []float64
 	VRAMUsed          []int64
@@ -317,6 +342,10 @@ type NodeInfo struct {
 	CreatedAt        time.Time          `json:"created_at"`
 }
 
+func (s *NodeService) GetNodeByID(ctx context.Context, id uuid.UUID) (*model.Node, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
 func (s *NodeService) GetNode(ctx context.Context, nodeID uuid.UUID) (*NodeInfo, error) {
 	node, err := s.repo.GetByID(ctx, nodeID)
 	if err != nil {
@@ -335,6 +364,93 @@ func (s *NodeService) ListNodes(ctx context.Context, providerID uuid.UUID) ([]*N
 		infos[i] = nodeToInfo(n)
 	}
 	return infos, nil
+}
+
+type AvailableNode struct {
+	ID                   uuid.UUID `json:"id"`
+	TotalGPU             int       `json:"total_gpu"`
+	AvailableGPU         int       `json:"available_gpu"`
+	TotalVRAMGB          int64     `json:"total_vram_gb"`
+	AvailableVRAMGB      int64     `json:"available_vram_gb"`
+	TotalRAMGB           int64     `json:"total_ram_gb"`
+	TotalDiskGB          int64     `json:"total_disk_gb"`
+	GPUModels            []string  `json:"gpu_models"`
+	Region               string    `json:"region"`
+	EstimatedPricePerHour float64  `json:"estimated_price_per_hour"`
+	Status               string    `json:"status"`
+	LastHeartbeat        time.Time `json:"last_heartbeat"`
+}
+
+func (s *NodeService) ListAvailableNodesPublic(ctx context.Context) ([]*AvailableNode, error) {
+	nodes, err := s.repo.ListActive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	available := make([]*AvailableNode, 0, len(nodes))
+	for _, n := range nodes {
+		available = append(available, &AvailableNode{
+			ID:                   n.ID,
+			TotalGPU:             n.TotalGPU,
+			AvailableGPU:         n.AvailableGPU,
+			TotalVRAMGB:          n.TotalVRAMGB,
+			AvailableVRAMGB:      n.AvailableVRAMGB,
+			TotalRAMGB:           n.TotalRAMGB,
+			TotalDiskGB:          n.TotalDiskGB,
+			GPUModels:            n.GPUModels,
+			Region:               n.Region,
+			EstimatedPricePerHour: s.estimatePrice(n),
+			Status:               string(n.Status),
+			LastHeartbeat:        n.LastHeartbeat,
+		})
+	}
+	return available, nil
+}
+
+func (s *NodeService) GetDeploymentByID(ctx context.Context, id uuid.UUID) (*model.Deployment, error) {
+	return s.repo.GetDeploymentByID(ctx, id)
+}
+
+func (s *NodeService) ListNodeDeployments(ctx context.Context, nodeID uuid.UUID) ([]model.Deployment, error) {
+	return s.repo.ListDeploymentsByNodeID(ctx, nodeID)
+}
+
+func (s *NodeService) UpdateDeploymentStatus(ctx context.Context, id uuid.UUID, status string) error {
+	return s.repo.UpdateDeploymentStatus(ctx, id, status)
+}
+
+func (s *NodeService) ListSSHKeys(ctx context.Context, userID uuid.UUID) ([]*model.SSHKey, error) {
+	return s.repo.ListSSHKeys(ctx, userID)
+}
+
+func (s *NodeService) AddSSHKey(ctx context.Context, userID uuid.UUID, name, publicKey string) (*model.SSHKey, error) {
+	fingerprint := fmt.Sprintf("%x", []byte(publicKey)[:8])
+	if len(fingerprint) > 16 {
+		fingerprint = fingerprint[:16]
+	}
+
+	key := &model.SSHKey{
+		ID:          uuid.New(),
+		UserID:      userID,
+		Name:        name,
+		PublicKey:   publicKey,
+		Fingerprint: fingerprint,
+		IsDefault:   true,
+	}
+
+	if err := s.repo.CreateSSHKey(ctx, key); err != nil {
+		return nil, fmt.Errorf("create SSH key: %w", err)
+	}
+
+	return key, nil
+}
+
+func (s *NodeService) DeleteSSHKey(ctx context.Context, keyID, userID uuid.UUID) error {
+	return s.repo.DeleteSSHKey(ctx, keyID, userID)
+}
+
+func (s *NodeService) GetDefaultSSHKey(ctx context.Context, userID uuid.UUID) (*model.SSHKey, error) {
+	return s.repo.GetDefaultSSHKey(ctx, userID)
 }
 
 func (s *NodeService) UpdateNodeStatus(ctx context.Context, nodeID uuid.UUID, status string) error {

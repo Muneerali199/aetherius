@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +23,9 @@ import (
 	mw "github.com/aetherius/platform/pkg/middleware"
 	"github.com/aetherius/platform/services/node/internal/service"
 )
+
+//go:embed install.sh
+var installScript []byte
 
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
@@ -74,7 +78,7 @@ func main() {
 
 	nodeRepo := repository.NewNodeRepository(pool)
 	nodeService := service.NewNodeService(nodeRepo, qClient)
-	nodeHandler := handler.NewNodeHandler(nodeService)
+	nodeHandler := handler.NewNodeHandler(nodeService, jwtManager)
 
 	r := chi.NewRouter()
 	r.Use(mw.CORSMiddleware)
@@ -89,18 +93,39 @@ func main() {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// Agent-facing routes (authenticated with node token)
-	r.Post("/v1/nodes/register", nodeHandler.RegisterNode)
+	r.Get("/install.sh", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/x-shellscript")
+		w.WriteHeader(http.StatusOK)
+		w.Write(installScript)
+	})
+
+	// Public routes (no auth)
+	r.Get("/v1/nodes/available", nodeHandler.ListAvailableNodes)
+
+	// Agent-facing routes (no auth — node uses its own token)
 	r.Post("/v1/nodes/heartbeat", nodeHandler.Heartbeat)
+	r.Post("/v1/nodes/{id}/heartbeat", nodeHandler.SimpleHeartbeat)
 
 	// User-facing routes (authenticated with JWT)
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware)
+		r.Post("/v1/nodes/register", nodeHandler.RegisterNode)
 		r.Get("/v1/nodes", nodeHandler.ListNodes)
 		r.Get("/v1/nodes/{id}", nodeHandler.GetNode)
 		r.Post("/v1/nodes/{id}/pause", nodeHandler.PauseNode)
 		r.Post("/v1/nodes/{id}/resume", nodeHandler.ResumeNode)
+		r.Get("/v1/ssh-keys", nodeHandler.ListSSHKeys)
+		r.Get("/v1/ssh-keys/default", nodeHandler.GetDefaultSSHKey)
+		r.Post("/v1/ssh-keys", nodeHandler.AddSSHKey)
+		r.Delete("/v1/ssh-keys/{id}", nodeHandler.DeleteSSHKey)
 	})
+
+	// WebSocket terminal (auth via query param)
+	r.Get("/v1/workspace/{id}/terminal", nodeHandler.WorkspaceTerminal)
+
+	// Agent-facing deployment routes (no auth — used by running nodes)
+	r.Get("/v1/nodes/{id}/deployments", nodeHandler.ListNodeDeployments)
+	r.Post("/v1/nodes/{id}/deployments/{deploymentId}/status", nodeHandler.UpdateDeploymentStatus)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.port,

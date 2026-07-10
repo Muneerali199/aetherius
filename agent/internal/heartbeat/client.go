@@ -15,6 +15,7 @@ type Client struct {
 	serverURL   string
 	nodeID      string
 	nodeToken   string
+	agentURL    string
 	httpClient  *http.Client
 	interval    time.Duration
 	collector   MetricsCollector
@@ -34,20 +35,26 @@ type MetricsCollector interface {
 	GetRunningContainers() ([]string, error)
 }
 
-func NewClient(serverURL, nodeID, nodeToken string, collector MetricsCollector) *Client {
+func NewClient(serverURL, nodeID, nodeToken, agentURL string, collector MetricsCollector) *Client {
 	return &Client{
 		serverURL:  serverURL,
 		nodeID:     nodeID,
 		nodeToken:  nodeToken,
+		agentURL:   agentURL,
 		httpClient: &http.Client{Timeout: 15 * time.Second},
-		interval:   5 * time.Second,
+		interval:   30 * time.Second,
 		collector:  collector,
 	}
+}
+
+func (c *Client) SetInterval(d time.Duration) {
+	c.interval = d
 }
 
 type HeartbeatPayload struct {
 	NodeID            string    `json:"node_id"`
 	NodeToken         string    `json:"node_token"`
+	AgentURL          string    `json:"agent_url"`
 	GPUUtil           []float64 `json:"gpu_util"`
 	GPUTemps          []float64 `json:"gpu_temps"`
 	VRAMUsed          []int64   `json:"vram_used"`
@@ -101,6 +108,7 @@ func (c *Client) sendHeartbeat() error {
 	payload := HeartbeatPayload{
 		NodeID:            c.nodeID,
 		NodeToken:         c.nodeToken,
+		AgentURL:          c.agentURL,
 		GPUUtil:           gpuUtil,
 		GPUTemps:          gpuTemps,
 		VRAMUsed:          vramUsed,

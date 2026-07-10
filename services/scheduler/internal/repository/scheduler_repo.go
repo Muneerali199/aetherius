@@ -8,8 +8,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/aetherius/platform/services/scheduler/internal/model"
+	"github.com/aetherius/platform/services/scheduler/internal/scheduler"
 )
 
 type SchedulerRepository struct {
@@ -84,6 +86,40 @@ func (r *SchedulerRepository) AssignNode(ctx context.Context, deploymentID uuid.
 	query := `UPDATE deployments SET node_id = $1, status = $2, assigned_at = $3, updated_at = $4 WHERE id = $5`
 	_, err := r.pool.Exec(ctx, query, nodeID, model.DeployStatusScheduling, time.Now(), time.Now(), deploymentID)
 	return err
+}
+
+func (r *SchedulerRepository) ListActiveNodes(ctx context.Context) ([]*scheduler.NodeSnapshot, error) {
+	query := `SELECT id, provider_id, status, total_gpu, available_gpu, total_vram_gb,
+		available_vram_gb, total_ram_gb, available_ram_gb, total_disk_gb, available_disk_gb,
+		gpu_models, network_speed_mbps, region, latitude, longitude,
+		reputation_score, benchmark_score, last_heartbeat
+		FROM nodes WHERE status = 'active'`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var nodes []*scheduler.NodeSnapshot
+	for rows.Next() {
+		n := &scheduler.NodeSnapshot{}
+		var gpuArray pgtype.Array[string]
+		err := rows.Scan(
+			&n.ID, &n.ProviderID, &n.Status, &n.TotalGPU, &n.AvailableGPU,
+			&n.TotalVRAMGB, &n.AvailableVRAMGB, &n.TotalRAMGB, &n.AvailableRAMGB,
+			&n.TotalDiskGB, &n.AvailableDiskGB, &gpuArray, &n.NetworkSpeed,
+			&n.Region, &n.Latitude, &n.Longitude,
+			&n.Reputation, &n.Benchmark, &n.LastHeartbeat,
+		)
+		if err != nil {
+			return nil, err
+		}
+		n.GPUModels = gpuArray.Elements
+		n.PricePerHour = 0.10
+		nodes = append(nodes, n)
+	}
+	return nodes, rows.Err()
 }
 
 func (r *SchedulerRepository) UpdateStatus(ctx context.Context, deploymentID uuid.UUID, status model.DeploymentStatus) error {

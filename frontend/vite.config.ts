@@ -17,8 +17,17 @@ export default defineConfig({
         target: 'http://localhost:8082',
         changeOrigin: true,
       },
+      '/v1/ssh-keys': {
+        target: 'http://localhost:8082',
+        changeOrigin: true,
+      },
+      '/v1/workspace': {
+        target: 'http://localhost:8082',
+        changeOrigin: true,
+        ws: true,
+      },
       '/v1/deployments': {
-        target: 'http://localhost:8085',
+        target: 'http://localhost:8083',
         changeOrigin: true,
       },
       '/v1/listings': {

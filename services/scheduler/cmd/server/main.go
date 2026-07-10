@@ -136,6 +136,14 @@ func main() {
 	go func() {
 		ticker := time.NewTicker(3 * time.Second)
 		for range ticker.C {
+
+			nodes, err := repo.ListActiveNodes(ctx)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to list active nodes")
+			} else {
+				sched.UpdateNodes(nodes)
+			}
+
 			pending, err := repo.ListPendingDeployments(ctx)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to list pending deployments")
