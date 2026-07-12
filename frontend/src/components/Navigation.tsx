@@ -32,9 +32,9 @@ export default function Navigation() {
       ref={navRef}
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-700"
       style={{
-        backgroundColor: scrolled ? 'rgba(0, 13, 29, 0.85)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(20px)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(0, 119, 182, 0.15)' : '1px solid transparent',
+        backgroundColor: scrolled ? 'rgba(0, 13, 29, 0.85)' : 'rgba(0, 8, 20, 0.5)',
+        backdropFilter: scrolled ? 'blur(20px)' : 'blur(12px)',
+        borderBottom: '1px solid rgba(0, 119, 182, 0.15)',
       }}
     >
       <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-4 md:px-12">
@@ -61,8 +61,8 @@ export default function Navigation() {
             <a
               key={link.label}
               href={link.href}
-              className="font-mono-data transition-colors duration-300 hover:text-mist"
-              style={{ color: 'rgba(202, 240, 248, 0.6)' }}
+              className="font-mono-data transition-colors duration-300 hover:brightness-125"
+              style={{ color: 'rgba(202, 240, 248, 0.85)' }}
               onClick={(e) => {
                 if (link.href.startsWith('/')) {
                   // Internal route — let browser navigate

@@ -29,18 +29,24 @@ const statusColors: Record<string, string> = {
   failed: '#ff6b6b',
 }
 
+interface FileNode {
+  name: string
+  type: 'file' | 'folder'
+  children?: FileNode[]
+}
+
 function FileTree() {
-  const files = [
-    { name: 'workspace', type: 'folder' as const, children: [
-      { name: 'train.py', type: 'file' as const },
-      { name: 'model.py', type: 'file' as const },
-      { name: 'requirements.txt', type: 'file' as const },
-      { name: 'data', type: 'folder' as const, children: [
-        { name: 'sample.csv', type: 'file' as const },
+  const files: FileNode[] = [
+    { name: 'workspace', type: 'folder', children: [
+      { name: 'train.py', type: 'file' },
+      { name: 'model.py', type: 'file' },
+      { name: 'requirements.txt', type: 'file' },
+      { name: 'data', type: 'folder', children: [
+        { name: 'sample.csv', type: 'file' },
       ]},
     ]},
-    { name: '.ssh', type: 'folder' as const, children: [
-      { name: 'authorized_keys', type: 'file' as const },
+    { name: '.ssh', type: 'folder', children: [
+      { name: 'authorized_keys', type: 'file' },
     ]},
   ]
 
@@ -48,15 +54,13 @@ function FileTree() {
     <div className="py-2">
       <p className="px-3 pb-1 font-mono text-[10px] tracking-wider uppercase" style={{ color: 'rgba(202, 240, 248, 0.3)' }}>EXPLORER</p>
       <div className="space-y-0.5">
-        <TreeNode name="~" type="folder" defaultOpen>
-          {files.map((f, i) => <TreeNode key={i} {...f} />)}
-        </TreeNode>
+        <TreeNode name="~" type="folder" defaultOpen children={files} />
       </div>
     </div>
   )
 }
 
-function TreeNode({ name, type, children, defaultOpen }: { name: string; type: 'file' | 'folder'; children?: React.ReactNode; defaultOpen?: boolean }) {
+function TreeNode({ name, type, children, defaultOpen }: { name: string; type: 'file' | 'folder'; children?: FileNode[]; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen || false)
   return (
     <div>
@@ -76,7 +80,7 @@ function TreeNode({ name, type, children, defaultOpen }: { name: string; type: '
         {name}
       </button>
       {type === 'folder' && open && children && (
-        <div className="ml-3">{children}</div>
+        <div className="ml-3">{children.map((c, i) => <TreeNode key={i} {...c} />)}</div>
       )}
     </div>
   )

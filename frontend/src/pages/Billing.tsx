@@ -18,6 +18,7 @@ interface Transaction {
   net_amount: number
   balance_after: number
   description: string
+  reference: string
   created_at: string
 }
 
